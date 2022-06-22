@@ -1,0 +1,366 @@
+#+BLOG: myblog
+#+POSTID: 894
+#+ORG2BLOG:
+#+DATE: [2022-06-20 Mon 10:23]
+#+OPTIONS: toc:nil num:nil todo:nil pri:nil tags:nil ^:nil
+#+CATEGORY: rescript, react
+#+TAGS: ar/vr
+#+DESCRIPTION:
+#+TITLE: Viro 설정하기
+
+* Viro 설정하기
+
+** Viro란?
+
+ViroReact는 Viro Media에서 개발되어 2019년 오픈소스가 되었다. 2020년
+후반 Viro Community가 구성되어 향후 프로젝트에 대한 관리를 지원하게
+되었으며, React native에 대한 최신 지원 및 신규 기능 개발도
+진행되었다.
+
+ViroReact는 증강현실(Augument Reality : AR)과 가상현실(Virtual
+Reality: VR) 경험을 신속하게 개발할 수 있도록 해주는
+라이브러리이다. React Native로 작성할 수 있으며, 구글 데이드림, 삼성
+기어VR, 구글 카드보드 등을 지원하며 iOS ARKit과 Android ARCore 등 AR
+플랫폼 역시 지원한다.
+
+## 프로젝트 구성하기
+
+가장 좋은 것은 [[https://github.com/ViroCommunity/viro][프로젝트 Github]] [[https://github.com/virocommunity/viro/blob/HEAD/readmes/INSTALL.md][설치방법]]을 따르는 것이다. 최신 버전은 2.23.0 이다.
+
+*** 프로젝트 생성
+
+여기에서는 약간 변주된 방식으로 생성한다.
+
+일단 기본 프로젝트 틀을 만든다. 추천하는 방법은 react-native cli로 프로젝트를 구성하는 것이다.
+
+#+BEGIN_SRC
+npx @react-native-community/cli init [프로젝트명]
+#+END_SRC
+
+*** Viro 의존성 설치하기
+
+Viro Community 의존성을 아래와 같이 추가한다.
+
+#+BEGIN_SRC
+npm install --legacy-peer-deps --save @viro/community/react-viro
+#+END_SRC
+
+=--legacy-peer-deps= 를 넣지않으면 =react-dom= 등에서 패키지 버전
+충돌이 일어나기 때문에 필수적으로 넣어야한다.
+
+*** 선택사항: Rescript 지원 추가 
+
+Rescript를 이용해서 React native 개발을 원한다면 다음의 의존성을 추가한다.
+
+#+BEGIN_SRC
+npm install --legacy-peer-deps @rescript/react rescript-react-native
+#+END_SRC
+
+프로젝트 루트 공간에 `bsconfig.json` 파일을 만들고 안에 다음과 같은 내용을 넣는다.
+
+```json
+{
+  "name": "viro_rescript",
+  "reason": {"react-jsx": 3},
+  "package-specs": {
+    "module": "es6",
+    "in-source": true
+  },
+  "suffix": ".bs.js",
+  "sources": [
+    {
+      "dir": "src",
+      "subdirs": true
+    }
+  ],
+  "bs-dependencies": ["@rescript/react", "rescript-react-native"]
+}
+```
+
+`package.json` 에 Rescript 관련 실행 스크립트를 지정한다.
+
+```json
+
+  "scripts": {
+    ...
+    "res:clean": "rescript clean",
+    "res:build": "rescript build",
+    "res:watch": "rescript build -w",
+    ...
+  },
+```
+
+### Android Linking
+
+Andorid 에서 정상적으로 돌기 위해서는 관련 소스를 수정해야한다.
+
+
+#### `android/build.gradle`
+
+AR/VR 기능을 위해서는 SDK 버전이 24이상이어야하며, Gradle plugin의 버전 역시 4.1.1 이상이어야한다.
+
+```groovy
+buildscript{
+  ext{
+    ...
+    minSdkVersion = 24
+    ...
+  }
+  ...
+  dependencies{
+    classpath('com.android.tools.build:gradle:4.1.1')
+  }
+}
+```
+
+#### `android/app/buld.gradle`
+
+아래와 같이 의존성을 추가한다.
+
+```groovy
+dependencies {
+  ...
+
+  // 이 아래 라인을 넣는다.
+  implementation project(':gvr_common')
+  implementation project(':arcore_client')
+  implementation project(path: ':react_viro')
+  implementation project(path: ':viro_renderer')
+  implementation 'com.google.android.exoplayer:exoplayer:2.17.1' // github에서는 2.7.1 이지만, maven 저장소등에는 없는 버전이므로 2.17.1을 쓸 것
+  implementation 'com.google.protobuf.nano:protobuf-javanano:3.0.0-alpha-7'
+  ...
+```
+
+#### `android/settings.gradle`
+
+맨 끝에 아래를 추가한다.
+
+```groovy
+include ':react_viro', ':arcore_client', ':gvr_common', ':viro_renderer'
+project(':arcore_client').projectDir = new File('../node_modules/@viro-community/react-viro/android/arcore_client')
+project(':gvr_common').projectDir = new File('../node_modules/@viro-community/react-viro/android/gvr_common')
+project(':viro_renderer').projectDir = new File('../node_modules/@viro-community/react-viro/android/viro_renderer')
+project(':react_viro').projectDir = new File('../node_modules/@viro-community/react-viro/android/react_viro')
+```
+
+#### `android/gradle/wrapper/gradle-wrapper.properties`
+
+`distributionUrl` 이 최소한 6.5 버전 이상이어야한다.
+
+```
+distributionUrl=https\://services.gradle.org/distributions/gradle-7.3.3-all.zip
+```
+
+#### `android/app/src/main/java/com/viro_rescript/MainApplication.java`
+
+모듈을 임포트 영역에 다음을 추가한다.
+
+```java
+import com.viromedia.bridge.ReactViroPackage;
+```
+
+`getPackages` 메서드에 `ReactViroPackage` 패키지를 추가한다.
+
+```java
+        @Override
+        protected List<ReactPackage> getPackages() {
+          @SuppressWarnings("UnnecessaryLocalVariable")
+          List<ReactPackage> packages = new PackageList(this).getPackages();
+          // Packages that cannot be autolinked yet can be added manually here, for example:
+          // packages.add(new MyReactNativePackage());
+          packages.add(new ReactViroPackage(ReactViroPackage.ViroPlatform.valueOf("AR")));
+
+
+          return packages;
+        }
+```
+
+`AR`이라고 된 부분은 프로젝트에 따라 바꾸면 된다. 가능한 값은 `GVR`, `OVR_MOBILE`, `AR` 등이 있다.
+
+#### `android/app/src/main/AndroidManifest.xml`
+
+AR과 VR에 따라 설정이 다르므로 주의해서 수정한다.
+
+##### AR
+
+- `manifest` 에 `tools` 네임스페이스를 추가한다.
+
+    ```xml
+    <manifest ... xmlns:tools="http://schemas.android.com/tools" ...>
+    ```
+
+- `application` 노드에 `meta-data` 를 추가한다. 해당 앱을 ARCore 전용으로 만들려면 `android:value` 의 값을 `"required"`로 설정한다.
+    ```xml
+    <meta-data android:name="com.google.ar.core" android:value="optional" />
+    ```
+
+- 퍼미션 목록이 쭈욱 나오는 곳에 아래를 추가한다.
+
+    ```xml
+    <uses-permission android:name="android.permission.CAMERA" />
+    ```
+- 필요하다면 아래 추가적인 퍼미션 목록 중 택해서 추가한다.
+    
+    ```xml
+    <!-- You may need these if doing any screen recording from within the app -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+    <!-- Other camera related features -->
+    <uses-feature android:name="android.hardware.camera" />
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" tools:replace="required"/>
+    <!-- Specifying OpenGL verison or requirements -->
+    <uses-feature android:glEsVersion="0x00030000" android:required="false" tools:node="remove" tools:replace="required" />
+    <!-- Usage of accelerometer and gyroscope -->
+    <uses-feature android:name="android.hardware.sensor.accelerometer" android:required="false" tools:replace="required" />
+    <uses-feature android:name="android.hardware.sensor.gyroscope" android:required="false" tools:replace="required" />
+    ```
+
+
+##### VR
+
+- 카드보드/ 데이드림 등을 지원한다면 `intent-filter` 에 관련 장비에 대한 설정을 추가해야한다.
+
+    ```xml
+    <intent-filter>
+        <action android:name="android.intent.action.MAIN" />
+        <category android:name="android.intent.category.LAUNCHER" />
+        <!-- Add the following line for cardboard -->
+        <category android:name="com.google.intent.category.CARDBOARD" />
+        <!-- Add the following line for daydream -->
+        <category android:name="com.google.intent.category.DAYDREAM" />
+    </intent-filter>
+    ```
+
+- GearVR의 경우 `application` 노드에 메타 데이터를 추가한다.
+
+    ```xml
+    <meta-data android:name="com.samsung.android.vr.application.mode" android:value="vr_only"/>
+    ```
+
+##### API 레벨 30 이상
+
+API 레벨 30이상의 대상을 사용한다면 `manifest`에 다음을 추가한다.
+
+    ```xml
+    <queries>
+        <package android:name="com.google.ar.core" />
+    </queries>
+    ```
+
+##### 디버깅 용도일 때 팁
+
+아래 한 줄을 `application` 노드에 넣는다.
+
+```xml
+<application
+    android:usesCleartextTraffic="true"
+    ...
+
+```
+
+AR 버전의 대략적인 전체 내역은 다음과 비슷할 것이다.
+
+```xml
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+  xmlns:tools="http://schemas.android.com/tools"
+  package="com.viro_rescript">
+    <queries>
+       <package android:name="com.google.ar.core" />
+    </queries>
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.CAMERA" />
+
+    <uses-feature android:name="android.hardware.camera.ar" />
+
+
+    <!-- You may need these if doing any screen recording from within the app -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+    <!-- Other camera related features -->
+    <uses-feature android:name="android.hardware.camera" />
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" tools:replace="required" />
+    <!-- Specifying OpenGL verison or requirements -->
+    <uses-feature android:glEsVersion="0x00030000" android:required="false" tools:node="remove" tools:replace="required"/>
+    <!-- Usage of accelerometer and gyroscope -->
+    <uses-feature android:name="android.hardware.sensor.accelerometer" android:required="false" tools:replace="required" />
+    <uses-feature android:name="android.hardware.sensor.gyroscope" android:required="false" tools:replace="required"  />
+
+    <application
+      android:name=".MainApplication"
+      android:label="@string/app_name"
+      android:icon="@mipmap/ic_launcher"
+      android:roundIcon="@mipmap/ic_launcher_round"
+      android:allowBackup="false"
+      android:theme="@style/AppTheme">
+      <meta-data android:name="com.google.ar.core" android:value="required" />
+      <activity
+        android:name=".MainActivity"
+        android:label="@string/app_name"
+        android:configChanges="keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode"
+        android:launchMode="singleTask"
+        android:windowSoftInputMode="adjustResize"
+        android:exported="true">
+        <intent-filter>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent-filter>
+      </activity>
+    </application>
+</manifest>
+
+```
+
+### iOS Linking
+
+1. `ios/Podfile` 의 `use_react_native!(:path => config["reactNativePath"])` 아래에 다음을 추가한다.
+    
+    ```
+    pod 'ViroReact', :path => '../node_modules/@viro-community/react-viro/ios'
+    pod 'ViroKit', :path => '../node_modules/@viro-community/react-viro/ios/dist/ViroRenderer/'
+    ```
+
+2. 프로젝트 루트에서 iOS 네이티브 포드를 설치한다.
+
+    ```sh
+    npx pod-install
+    ```
+    
+    아니면 프로젝트 `ios` 디렉토리 안에서
+
+    ```sh
+    pod install
+    ```
+    을 실행시킨다.
+
+3. AR 기능을 쓰려면 카메라를 사용해야하므로 `ios/APP_NAME/info.plist` 에 다음을 추가한다.
+
+    ```xml
+    <key>NSCameraUsageDescription</key>
+    <string>The camera is needed for AR functionality</string>
+    ```
+
+## 리소스 처리하기
+
+예제에서 `vrx` 등의 확장자를 가진 리소스를 `require` 로 가져오는데 기본적으로 번들러가 해당하는 확장자를 인식못하므로 해당 확장자를 번들러에 등록해야한다.
+
+Reactnative 가 사용하는 번덜러는 `metro`이므로 설정파일 `metro.config.js` 에 `resolver`를 추가한다.
+
+```js
+const defaultAssetExts = require("metro-config/src/defaults/defaults").assetExts;
+
+module.exports = {
+  resolver: {
+    assetExts: [...defaultAssetExts, 'vrx'],
+  },
+  transformer: {
+    getTransformOptions: async () => ({
+      transform: {
+        experimentalImportSupport: false,
+        inlineRequires: true,
+      },
+    }),
+  },
+};
+
+```
