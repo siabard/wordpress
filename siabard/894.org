@@ -23,7 +23,7 @@ Reality: VR) 경험을 신속하게 개발할 수 있도록 해주는
 기어VR, 구글 카드보드 등을 지원하며 iOS ARKit과 Android ARCore 등 AR
 플랫폼 역시 지원한다.
 
-## 프로젝트 구성하기
+** 프로젝트 구성하기
 
 가장 좋은 것은 [[https://github.com/ViroCommunity/viro][프로젝트 Github]] [[https://github.com/virocommunity/viro/blob/HEAD/readmes/INSTALL.md][설치방법]]을 따르는 것이다. 최신 버전은 2.23.0 이다.
 
@@ -56,9 +56,9 @@ Rescript를 이용해서 React native 개발을 원한다면 다음의 의존성
 npm install --legacy-peer-deps @rescript/react rescript-react-native
 #+END_SRC
 
-프로젝트 루트 공간에 `bsconfig.json` 파일을 만들고 안에 다음과 같은 내용을 넣는다.
+프로젝트 루트 공간에 =bsconfig.json= 파일을 만들고 안에 다음과 같은 내용을 넣는다.
 
-```json
+#+BEGIN_SRC
 {
   "name": "viro_rescript",
   "reason": {"react-jsx": 3},
@@ -75,11 +75,11 @@ npm install --legacy-peer-deps @rescript/react rescript-react-native
   ],
   "bs-dependencies": ["@rescript/react", "rescript-react-native"]
 }
-```
+#+END_SRC
 
-`package.json` 에 Rescript 관련 실행 스크립트를 지정한다.
+=package.json= 에 Rescript 관련 실행 스크립트를 지정한다.
 
-```json
+#+BEGIN_SRC
 
   "scripts": {
     ...
@@ -88,18 +88,18 @@ npm install --legacy-peer-deps @rescript/react rescript-react-native
     "res:watch": "rescript build -w",
     ...
   },
-```
+#+END_SRC
 
-### Android Linking
+*** Android Linking
 
-Andorid 에서 정상적으로 돌기 위해서는 관련 소스를 수정해야한다.
+Android 에서 정상적으로 돌기 위해서는 관련 소스를 수정해야한다.
 
 
-#### `android/build.gradle`
+**** =android/build.gradle=
 
 AR/VR 기능을 위해서는 SDK 버전이 24이상이어야하며, Gradle plugin의 버전 역시 4.1.1 이상이어야한다.
 
-```groovy
+#+BEGIN_SRC
 buildscript{
   ext{
     ...
@@ -111,13 +111,13 @@ buildscript{
     classpath('com.android.tools.build:gradle:4.1.1')
   }
 }
-```
+#+END_SRC
 
-#### `android/app/buld.gradle`
+**** =android/app/buld.gradle=
 
 아래와 같이 의존성을 추가한다.
 
-```groovy
+#+BEGIN_SRC
 dependencies {
   ...
 
@@ -129,39 +129,39 @@ dependencies {
   implementation 'com.google.android.exoplayer:exoplayer:2.17.1' // github에서는 2.7.1 이지만, maven 저장소등에는 없는 버전이므로 2.17.1을 쓸 것
   implementation 'com.google.protobuf.nano:protobuf-javanano:3.0.0-alpha-7'
   ...
-```
+#+END_SRC
 
-#### `android/settings.gradle`
+**** =android/settings.gradle=
 
 맨 끝에 아래를 추가한다.
 
-```groovy
+#+BEGIN_SRC
 include ':react_viro', ':arcore_client', ':gvr_common', ':viro_renderer'
 project(':arcore_client').projectDir = new File('../node_modules/@viro-community/react-viro/android/arcore_client')
 project(':gvr_common').projectDir = new File('../node_modules/@viro-community/react-viro/android/gvr_common')
 project(':viro_renderer').projectDir = new File('../node_modules/@viro-community/react-viro/android/viro_renderer')
 project(':react_viro').projectDir = new File('../node_modules/@viro-community/react-viro/android/react_viro')
-```
+#+END_SRC
 
-#### `android/gradle/wrapper/gradle-wrapper.properties`
+**** =android/gradle/wrapper/gradle-wrapper.properties=
 
-`distributionUrl` 이 최소한 6.5 버전 이상이어야한다.
+=distributionUrl= 이 최소한 6.5 버전 이상이어야한다.
 
-```
+#+BEGIN_SRC
 distributionUrl=https\://services.gradle.org/distributions/gradle-7.3.3-all.zip
-```
+#+END_SRC
 
-#### `android/app/src/main/java/com/viro_rescript/MainApplication.java`
+**** =android/app/src/main/java/com/viro_rescript/MainApplication.java=
 
 모듈을 임포트 영역에 다음을 추가한다.
 
-```java
+#+BEGIN_SRC
 import com.viromedia.bridge.ReactViroPackage;
-```
+#+END_SRC
 
-`getPackages` 메서드에 `ReactViroPackage` 패키지를 추가한다.
+=getPackages= 메서드에 =ReactViroPackage= 패키지를 추가한다.
 
-```java
+#+BEGIN_SRC
         @Override
         protected List<ReactPackage> getPackages() {
           @SuppressWarnings("UnnecessaryLocalVariable")
@@ -173,35 +173,39 @@ import com.viromedia.bridge.ReactViroPackage;
 
           return packages;
         }
-```
+#+END_SRC
 
-`AR`이라고 된 부분은 프로젝트에 따라 바꾸면 된다. 가능한 값은 `GVR`, `OVR_MOBILE`, `AR` 등이 있다.
+=AR= 이라고 된 부분은 프로젝트에 따라 바꾸면 된다. 가능한 값은 =GVR=,
+=OVR_MOBILE=, =AR= 등이 있다.
 
-#### `android/app/src/main/AndroidManifest.xml`
+**** =android/app/src/main/AndroidManifest.xml=
 
 AR과 VR에 따라 설정이 다르므로 주의해서 수정한다.
 
-##### AR
+***** AR
 
-- `manifest` 에 `tools` 네임스페이스를 추가한다.
+- =manifest= 에 =tools= 네임스페이스를 추가한다.
 
-    ```xml
+    #+BEGIN_SRC
     <manifest ... xmlns:tools="http://schemas.android.com/tools" ...>
-    ```
+    #+END_SRC
 
-- `application` 노드에 `meta-data` 를 추가한다. 해당 앱을 ARCore 전용으로 만들려면 `android:value` 의 값을 `"required"`로 설정한다.
-    ```xml
-    <meta-data android:name="com.google.ar.core" android:value="optional" />
-    ```
+- =application= 노드에 =meta-data= 를 추가한다. 해당 앱을 ARCore
+  전용으로 만들려면 =android:value= 의 값을 ="required"=로 설정한다.
+  
+  #+BEGIN_SRC
+   <meta-data android:name="com.google.ar.core" android:value="optional" />
+  #+END_SRC
 
 - 퍼미션 목록이 쭈욱 나오는 곳에 아래를 추가한다.
 
-    ```xml
+    #+BEGIN_SRC
     <uses-permission android:name="android.permission.CAMERA" />
-    ```
+    #+END_SRC
+    
 - 필요하다면 아래 추가적인 퍼미션 목록 중 택해서 추가한다.
     
-    ```xml
+    #+BEGIN_SRC
     <!-- You may need these if doing any screen recording from within the app -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
@@ -213,14 +217,15 @@ AR과 VR에 따라 설정이 다르므로 주의해서 수정한다.
     <!-- Usage of accelerometer and gyroscope -->
     <uses-feature android:name="android.hardware.sensor.accelerometer" android:required="false" tools:replace="required" />
     <uses-feature android:name="android.hardware.sensor.gyroscope" android:required="false" tools:replace="required" />
-    ```
+    #+END_SRC
 
 
-##### VR
+***** VR
 
-- 카드보드/ 데이드림 등을 지원한다면 `intent-filter` 에 관련 장비에 대한 설정을 추가해야한다.
+- 카드보드/ 데이드림 등을 지원한다면 =intent-filter= 에 관련 장비에
+  대한 설정을 추가해야한다.
 
-    ```xml
+    #+BEGIN_SRC
     <intent-filter>
         <action android:name="android.intent.action.MAIN" />
         <category android:name="android.intent.category.LAUNCHER" />
@@ -229,38 +234,38 @@ AR과 VR에 따라 설정이 다르므로 주의해서 수정한다.
         <!-- Add the following line for daydream -->
         <category android:name="com.google.intent.category.DAYDREAM" />
     </intent-filter>
-    ```
+    #+END_SRC
 
-- GearVR의 경우 `application` 노드에 메타 데이터를 추가한다.
+- GearVR의 경우 =application= 노드에 메타 데이터를 추가한다.
 
-    ```xml
+    #+BEGIN_SRC
     <meta-data android:name="com.samsung.android.vr.application.mode" android:value="vr_only"/>
-    ```
+    #+END_SRC
 
-##### API 레벨 30 이상
+***** API 레벨 30 이상
 
 API 레벨 30이상의 대상을 사용한다면 `manifest`에 다음을 추가한다.
 
-    ```xml
+    #+BEGIN_SRC
     <queries>
         <package android:name="com.google.ar.core" />
     </queries>
-    ```
+    #+END_SRC
 
-##### 디버깅 용도일 때 팁
+***** 디버깅 용도일 때 팁
 
-아래 한 줄을 `application` 노드에 넣는다.
+아래 한 줄을 =application= 노드에 넣는다.
 
-```xml
+#+BEGIN_SRC
 <application
     android:usesCleartextTraffic="true"
     ...
 
-```
+#+END_SRC
 
 AR 버전의 대략적인 전체 내역은 다음과 비슷할 것이다.
 
-```xml
+#+BEGIN_SRC
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
   xmlns:tools="http://schemas.android.com/tools"
   package="com.viro_rescript">
@@ -308,45 +313,48 @@ AR 버전의 대략적인 전체 내역은 다음과 비슷할 것이다.
       </activity>
     </application>
 </manifest>
+#+END_SRC
 
-```
+*** iOS Linking
 
-### iOS Linking
-
-1. `ios/Podfile` 의 `use_react_native!(:path => config["reactNativePath"])` 아래에 다음을 추가한다.
+1. =ios/Podfile= 의 =use_react_native!(:path => config["reactNativePath"])= 아래에 다음을 추가한다.
     
-    ```
+    #+BEGIN_SRC
     pod 'ViroReact', :path => '../node_modules/@viro-community/react-viro/ios'
     pod 'ViroKit', :path => '../node_modules/@viro-community/react-viro/ios/dist/ViroRenderer/'
-    ```
+    #+END_SRC
 
 2. 프로젝트 루트에서 iOS 네이티브 포드를 설치한다.
 
-    ```sh
+    #+BEGIN_SRC
     npx pod-install
-    ```
+    #+END_SRC
     
-    아니면 프로젝트 `ios` 디렉토리 안에서
+    아니면 프로젝트 =ios= 디렉토리 안에서
 
-    ```sh
+    #+BEGIN_SRC
     pod install
-    ```
+    #+END_SRC
+    
     을 실행시킨다.
 
-3. AR 기능을 쓰려면 카메라를 사용해야하므로 `ios/APP_NAME/info.plist` 에 다음을 추가한다.
+3. AR 기능을 쓰려면 카메라를 사용해야하므로 =ios/APP_NAME/info.plist= 에 다음을 추가한다.
 
-    ```xml
+    #+BEGIN_SRC
     <key>NSCameraUsageDescription</key>
     <string>The camera is needed for AR functionality</string>
-    ```
+    #+END_SRC
 
-## 리소스 처리하기
+** 리소스 처리하기
 
-예제에서 `vrx` 등의 확장자를 가진 리소스를 `require` 로 가져오는데 기본적으로 번들러가 해당하는 확장자를 인식못하므로 해당 확장자를 번들러에 등록해야한다.
+예제에서 =vrx= 등의 확장자를 가진 리소스를 =require= 로 가져오는데
+기본적으로 번들러가 해당하는 확장자를 인식못하므로 해당 확장자를
+번들러에 등록해야한다.
 
-Reactnative 가 사용하는 번덜러는 `metro`이므로 설정파일 `metro.config.js` 에 `resolver`를 추가한다.
+Reactnative 가 사용하는 번들러는 =metro= 이므로 설정파일
+=metro.config.js= 에 =resolver= 를 추가한다.
 
-```js
+#+BEGIN_SRC
 const defaultAssetExts = require("metro-config/src/defaults/defaults").assetExts;
 
 module.exports = {
@@ -362,5 +370,4 @@ module.exports = {
     }),
   },
 };
-
-```
+#+END_SRC
