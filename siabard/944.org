@@ -1,0 +1,135 @@
+#+BLOG: myblog
+#+POSTID: 944
+#+ORG2BLOG:
+#+DATE: [2022-06-28 Tue 09:13]
+#+OPTIONS: toc:nil num:nil todo:nil pri:nil tags:nil ^:nil
+#+CATEGORY: Lisp, SDL
+#+TAGS: Lisp
+#+DESCRIPTION:
+#+TITLE: Tween 만들기
+
+* Tween 만들기
+
+Tween 은 시작값에서 끝값까지 값이 일정 시간동안 특정한 규칙으로 변하는 형태이다.
+
+화면에 캐릭터의 움직임을 묘사하기위해 Tween을 사용해서 가속하고, 감속하는 효과를 주는 방식을 알아보자.
+
+** Tween 객체
+
+Tween 객체는 다음과 같이 정의한다.
+
+#+BEGIN_SRC
+  (defstruct tween start end timespan current-time)
+#+END_SRC
+
+위에서 각 항목은 다음과 같다.
+
+- =start= 시작값
+- =end= 끝값
+- =timespan= tween 이 동작할 전체 시간
+- =current-time= tween 이 동작한 경과시간
+
+
+위의 tween에 대한 선형적인 변화는 다음과 같다.
+
+#+BEGIN_SRC
+  (defun tween/linear (tw)
+    (let* ((start (tween-start tw))
+	   (end   (tween-end tw))
+	   (ct    (tween-current-time tw))
+	   (ts    (tween-timespan tw))
+	   (ratio (cond ((= 0 ts) 0)
+			(t  (/ ct ts))))
+	   (dt    (cond ((>= ratio 1) 1)
+			(t ratio))))
+      (floor (+ (* (- 1  dt) start)
+		(* dt end)))))
+
+#+END_SRC
+
+=current-time= 이 진행됨에 따라 =dt= 는 0~1까지의 값을 가지게 된다. 이
+값을 적용 적용하면 시작할 때( =dt= = 0) 값은 =start= 였다가 끝날 때(
+=dt= = 1) 값은 =end= 가 될 때까지 선형으로 변화하게 된다.
+
+종료를 판정하고, 종료전까지 tween 을 동작하는 루틴은 다음과 같다.
+
+#+BEGIN_SRC
+  ;; tween 종료?
+  (defun tween/end-p (tw)
+    (let ((current-time (tween-current-time tw))
+	  (timespan (tween-timespan tw)))
+      (>=  current-time timespan)))
+
+
+  ;; time 증가
+  ;; 종료확인하여 종료되면 tween 멈춤
+
+  (defun tween/update-dt (tw dt)
+    (incf (tween-current-time tw) dt)
+    (when (tween/end-p tw)
+      (setf (tween-start tw) 0)
+      (setf (tween-end tw) 0)
+      (setf (tween-timespan tw) 0)
+      (setf (tween-current-time tw) 0)))
+  
+#+END_SRC
+
+시간이 경과될 때마다 tween 의 =current-time= 을 증가하고, 해당 시간이
+전체 시간까지 가면 초기화한다.
+
+** Tween 의 적용
+
+이제 캐릭터의 이동을 tween 값을 더함으로써 이동한다. 이렇게하면
+가속하는 효과를 낼 수 있으며, tween 이 경과됨에 따라 가속값이
+줄어들면서 감속하는 효과도 얻게 된다.
+
+#+BEGIN_SRC
+  ;; dx, dy 값에 따라 x, y 값을 변화시킨다.
+  ;; dx, dy 는 자연적으로 감소해야한다.
+  (defun entity/update-dt (entity dt)
+    (let ((delta-x (tween/linear (entity-dx entity)))
+	  (delta-y (tween/linear (entity-dy entity))))
+      (incf (entity-x entity) delta-x)
+      (incf (entity-y entity) delta-y)
+      (tween/update-dt (entity-dx entity) dt)
+      (tween/update-dt (entity-dy entity) dt)
+      (entity/increase-elapsed-time-dt entity dt)))
+#+END_SRC
+
+단위 시간 =dt= 가 들어올 때마다 해당 tween =dx=, =dy= 도 업데이트한다.
+
+이제 키보드가 눌리면 tween 값을 생성하거나, 초기화시켜 tween을
+동작시킨다.
+
+
+#+BEGIN_SRC
+  ;; 키보드 값이 눌리면 dx, dy 값을 변화시킨다.
+  ;; 최대값은 400이다.
+  (defun entity/update-input (entity keys mouses)
+    (when (key-held-p keys (sdl2:scancode-key-to-value :scancode-left))
+      (decf (tween-start        (entity-dx entity)) 0.1)
+      (setf (tween-timespan     (entity-dx entity)) 100)
+      (setf (tween-current-time (entity-dx entity)) 0))
+    (when (key-held-p keys (sdl2:scancode-key-to-value :scancode-right))
+      (incf (tween-start        (entity-dx entity)) 0.1)
+      (setf (tween-timespan     (entity-dx entity)) 100)
+      (setf (tween-current-time (entity-dx entity)) 0))
+    (when (key-held-p keys (sdl2:scancode-key-to-value :scancode-up))
+      (decf (tween-start        (entity-dy entity)) 0.1)
+      (setf (tween-timespan     (entity-dy entity)) 100)
+      (setf (tween-current-time (entity-dy entity)) 0))
+    (when (key-held-p keys (sdl2:scancode-key-to-value :scancode-down))
+      (incf (tween-start        (entity-dy entity)) 0.1)
+      (setf (tween-timespan     (entity-dy entity)) 100)
+      (setf (tween-current-time (entity-dy entity)) 0))
+    (cond ((<  40 (tween-start  (entity-dx entity))) (setf (tween-start (entity-dx entity))  40))
+	  ((> -40 (tween-start  (entity-dx entity))) (setf (tween-start (entity-dx entity)) -40)))
+    (cond ((<  40 (tween-start  (entity-dy entity))) (setf (tween-start (entity-dy entity))  40))
+	  ((> -40 (tween-start  (entity-dy entity))) (setf (tween-start (entity-dy entity)) -40))))
+#+END_SRC
+
+키가 눌리면 tween 의 =start= 값을 조절하고 =timespan= 과
+=current-time= 을 초기화시켜서 =dx=, =dy= 가 최대값이 가질 수 있도록
+한다.
+
+
