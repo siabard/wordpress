@@ -1,0 +1,186 @@
+#+BLOG: myblog
+#+POSTID: 948
+#+DATE: [2022-08-07 Sun 14:57]
+#+OPTIONS: toc:nil num:nil todo:nil pri:nil tags:nil ^:nil
+#+CATEGORY: web, react
+#+TAGS: 
+#+DESCRIPTION:
+#+TITLE: TODO_WORKS 1회차
+
+* =TODO_WORKS= 프로젝트
+
+front와 backend를 다양한 조합으로 만들어내는 프로젝트를 구성해본다. 먼저 가장 처음으로 frontend만 만들어보자.
+
+** 프로젝트의 생성 (w/ =vite=)
+
+=vite=를 이용한 프로젝트 생성은 다음과 같다.
+
+#+BEGIN_SRC
+  npm init vite@latest todo_works -- --template react-ts
+#+END_SRC
+
+생성된 디렉토리에 prettier 설정을 =.prettierrc= 에 넣는다.
+
+#+BEGIN_SRC
+{
+  "tabWidth": 2,
+  "useTabs": false,
+  "semi": true,
+  "singleQuote": true,
+  "trailingComma": "all",
+  "printWidth": 80,
+  "arrowParens": "avoid"
+}
+#+END_SRC
+
+** =src/= 에 대한 =@/= 매핑
+
+=import= 등에서 =src/= 가 아니라 =@/= 식으로 매핑하려면 =vite= 에 일부 설정을 추가한다.
+
+=vite.config.ts= 에 아래와 같이 등록한다.
+
+#+BEGIN_SRC
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import path from 'path';
+
+// https://vitejs.dev/config/
+export default defineConfig({
+  plugins: [react()],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    },
+  },
+});
+#+END_SRC
+
+이 때 =path= 등을 못찾는다는 오류가 날 수 있는데, 일부 개발용 의존성을 추가한다.
+
+#+BEGIN_SRC
+  npm install --save-dev @types/node
+#+END_SRC
+
+다음으로 =tsconfig.js= 에 아래와 같이 두 줄을 추가한다.
+
+#+BEGIN_SRC
+{
+  ...
+  "exclude": ["node_modules", "public", "lib"],
+  "extends": "./tsconfig.paths.json"
+}
+#+END_SRC
+
+이제 =tsconfig.paths.json= 을 아래와 같이 작성하면 된다.
+
+#+BEGIN_SRC
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  }
+}
+#+END_SRC
+
+** React router
+
+의존성을 아래와 같이 추가한다.
+
+#+BEGIN_SRC
+  npm install react-router-dom
+  npm install --save-dev @types/react-router-dom
+#+END_SRC
+
+다음으로 =main.tsx= 를 아래와 같이 수정한다.
+
+#+BEGIN_SRC
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import { Route, Routes } from 'react-router-dom';
+import { BrowserRouter } from 'react-router-dom';
+
+import Home from '@/feature/home/Home';
+import Counter from '@/feature/counter/Counter';
+import './index.css';
+
+ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
+  <React.StrictMode>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/counter" element={<Counter />} />
+        <Route path="*" element={<Home />} />
+      </Routes>
+    </BrowserRouter>
+  </React.StrictMode>,
+);
+#+END_SRC
+
+이제 필요한 것은 =src/features/= 에 각기 필요한 컴포넌트를 넣는 것이다.
+
+먼저 =Counter= 는 아래와 같이 =App.tsx=를
+=src/feature/counter/Counter.tsx= 파일로 바꾼다. 원래 있던 =App.css=
+는 =src/feature/counter/Counter.css= 로 옮긴다.
+
+#+BEGIN_SRC
+import { useState } from 'react';
+import reactLogo from '@/assets/react.svg';
+import './Counter.css';
+
+function Counter() {
+  const [count, setCount] = useState(0);
+
+  return (
+    <div className="App">
+      <div>
+        <a href="https://vitejs.dev" target="_blank">
+          <img src="/vite.svg" className="logo" alt="Vite logo" />
+        </a>
+        <a href="https://reactjs.org" target="_blank">
+          <img src={reactLogo} className="logo react" alt="React logo" />
+        </a>
+      </div>
+      <h1>Vite + React</h1>
+      <div className="card">
+        <button onClick={() => setCount(count => count + 1)}>
+          count is {count}
+        </button>
+        <p>
+          Edit <code>src/App.tsx</code> and save to test HMR
+        </p>
+      </div>
+      <p className="read-the-docs">
+        Click on the Vite and React logos to learn more
+      </p>
+    </div>
+  );
+}
+
+export default Counter;
+#+END_SRC
+
+=Home= 은 =src/feature/home/Home.tsx= 에 아래와 같이 간단히 만든다.
+
+#+BEGIN_SRC
+const Home = () => {
+  return <div>Home</div>;
+};
+
+export default Home;
+#+END_SRC
+
+** 실행
+
+이제 다음과 같은 명령으로 테스트해본다.
+
+#+BEGIN_SRC
+  npm run dev
+#+END_SRC
+
+=http://localhost/counter= 와 =http://localhost/= 로 접근하면 각각
+=Counter= 및 =Home= 컴포넌트의 결과를 볼 수 있다.
+
+* 다음에는...
+
+=redux-toolkin= 을 붙여 state를 저장하는 방법을 구현한다.

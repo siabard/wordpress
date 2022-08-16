@@ -1,0 +1,156 @@
+#+BLOG: myblog
+#+POSTID: 954
+#+ORG2BLOG:
+#+DATE: [2022-08-13 Sat 21:21]
+#+OPTIONS: toc:nil num:nil todo:nil pri:nil tags:nil ^:nil
+#+CATEGORY: web, react
+#+TAGS:
+#+DESCRIPTION:
+#+TITLE: Redux 추가
+
+* Redux-toolkit
+
+React의 state를 관리하는 툴은 다양하지만 여기에서는 공식적으로
+지원받는 Redux-toolkit을 이용하도록 해본다.
+
+** 설치하기
+
+#+BEGIN_SRC
+npm install @reduxjs/toolkit react-redux
+#+END_SRC
+
+** Store
+
+설치가 끝났다면 store를 설정해야한다. =src/app/store.ts= 에 다음과 같이 작성한다.
+
+#+BEGIN_SRC
+import { configureStore } from '@reduxjs/toolkit';
+
+export const store = configureStore({
+  reducer: {},
+});
+
+// Infer the `RootState` and `AppDispatch` types from the store itself
+export type RootState = ReturnType<typeof store.getState>;
+// Inferred type: {posts: PostsState, comments: CommentsState, users: UsersState}
+export type AppDispatch = typeof store.dispatch;
+#+END_SRC
+
+다음으로 해야할 일은 React 컴포넌트에서 =Provider= 를 통해 해당
+store에 접근하게 하는 것이다.
+
+=src/main.tsx= 에 아래와 같이 내용을 추가한다.
+
+#+BEGIN_SRC
+
+...  
+import { store } from '@/app/store';
+import { Provider } from 'react-redux';
+...
+
+ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
+  <React.StrictMode>
+    <Provider store={store}>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/counter" element={<Counter />} />
+          <Route path="*" element={<Home />} />
+        </Routes>
+      </BrowserRouter>
+    </Provider>
+  </React.StrictMode>,
+);
+#+END_SRC
+
+
+
+** Slice
+
+이제 Reducer 슬라이스를 설정해야한다. 간단하게
+=src/features/counter/counterSlice.js= 를 아래와 같이 작성한다.
+
+
+슬라이스를 작성할 때에는 해당 슬라이스를 구분할 문자열 명칭과, 초기값, 하나 혹은 그 이상의 Reducer 함수가 필요하다.
+슬라이스가 생성되면 해당 전체 슬라이스에 대해 생성된 Reducer 함수와 액션 생성자를 내보낼 수 있다.
+
+Redux Toolkit 에서는 Immer를 이용해 직접적인 데이터 변경대신 원래의 값을 이용해 새로운 값을 만드는 방식으로 새로운 State를 만든다.
+
+#+BEGIN_SRC
+
+import { createSlice } from "@reduxjs/toolkit";
+import type { PayloadAction } from "@reduxjs/toolkit";
+
+export interface CounterState {
+  value: number
+};
+
+const initialState : CounterState = {
+  value: 0
+};
+
+
+export const counterSlice = createSlice({
+  name: 'counter',
+  initialState,
+  reducers: {
+    increment: (state: CounterState) => {
+      state.value += 1
+    },
+    decrement: (state: CounterState) => {
+      state.value -= 1
+    },
+    incrementByAmount: (state: CounterState, action: PayloadAction<number>) => {
+      state.value += action.payload
+    }
+  }
+});
+
+export const {increment, decrement, incrementByAmount} = counterSlice.actions;
+
+export default counterSlice.reducer;
+
+#+END_SRC
+
+** Store에 Reducer를 등록하기
+
+store에 =reducer= 파라미터에 slice에서 정의한 리듀서를 등록함으로써, 해당 State에 대한 처리를 이 리듀서가 할 것임을 정의한다.
+
+#+BEGIN_SRC
+...
+import counterReducer from '@/features/counter/counterSlice';
+
+export const store = configureStore({
+  reducer: {
+    counter: counterReducer,
+  },
+});
+...
+#+END_SRC
+
+** React 컴포넌트에서 사용하기
+
+이제 React 컴포넌트에서는 해당 State의 값을 selector로 읽고, dispatch로 액션을 전달할 수 있게된다.
+
+#+BEGIN_SRC
+import type { RootState } from '@/app/store';
+import { useSelector, useDispatch } from 'react-redux';
+import { increment, decrement } from './counterSlice';
+import './Counter.css';
+
+function Counter() {
+  const count = useSelector((state: RootState) => state.counter.value);
+  const dispatch = useDispatch();
+
+  return (
+    <div className="App">
+      <div className="card">
+        <button onClick={() => dispatch(increment())}>Increment</button>
+        <span>{count}</span>
+        <button onClick={() => dispatch(decrement())}>Decrement</button>
+      </div>
+    </div>
+  );
+}
+
+export default Counter;
+#+END_SRC

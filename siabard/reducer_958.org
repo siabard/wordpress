@@ -1,0 +1,70 @@
+#+BLOG: myblog
+#+POSTID: 958
+#+ORG2BLOG:
+#+DATE: [2022-08-16 Tue 22:00]
+#+OPTIONS: toc:nil num:nil todo:nil pri:nil tags:nil ^:nil
+#+CATEGORY: web, react
+#+TAGS:
+#+DESCRIPTION:
+#+TITLE: Reducer 내용 추가
+
+* Reducer 추가
+
+우선 현재 `useSelector`, `useDispatch`에는 정확한 타입이
+정의되어있지않다. 정확한 타입이 정의된 훅을 만들어 이를 설정한다.
+
+=src/app/hooks.ts= 에 아래 내용을 넣는다.
+
+#+BEGIN_SRC
+
+import { TypedUseSelectorHook, useDispatch, useSelector } from "react-redux";
+import { AppDispatch, RootState } from "./store";
+
+export const useAppDispatch = () => useDispatch<AppDispatch>();
+export const useAppSelector: TypedUseSelectorHook<RootState> = useSelector;
+
+#+END_SRC
+
+
+다음으로는 기존의 =src/features/counter/Counter.tsx= 컴포넌트의 내용을 고친다.
+
+#+BEGIN_SRC
+
+import type { RootState } from '@/app/store';
+import './Counter.css';
+import { useAppDispatch, useAppSelector } from '@/app/hooks';
+
+function Counter() {
+  const count = useAppSelector((state: RootState) => state.counter.value);
+  const dispatch = useAppDispatch();
+
+  return (
+    <div className="App">
+      <div className="card">
+        <button onClick={() => dispatch({ type: 'counter/increment' })}>
+          Increment
+        </button>
+        <span>{count}</span>
+        <button onClick={() => dispatch({ type: 'counter/decrement' })}>
+          Decrement
+        </button>
+        <button
+          onClick={() =>
+            dispatch({ type: 'counter/incrementByAmount', payload: 2 })
+          }
+        >
+          +2
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export default Counter;
+
+#+END_SRC
+
+위에서 보듯이 =dispatch= 에서 파리미터에 =type=, =payload= 를 지정할
+수 있다. 함수형태로 지정할 수도 있고, 위에서처럼 각 파라미터를 따로 정해줄 수도 있다.
+
+어떤 방식이 편할지는 개발시 Coding Convention을 따르기 바란다.
